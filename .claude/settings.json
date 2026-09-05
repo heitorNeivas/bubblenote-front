@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(API_BASE_URL=http://localhost:8000/api npx next build)",
+      "Bash(netstat -ano)"
+    ]
+  }
+}

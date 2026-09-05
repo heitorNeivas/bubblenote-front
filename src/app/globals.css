@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/**
+ * Tema dark minimalista — cinza grafite com ciano como cor de destaque.
+ * App é dark-only por design — sem alternância clara/escura.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #2d3135;
+  --bg-elevated: #363b40;
+  --bg-sidebar: #272b2f;
+  --bg-hover: #3b4046;
+
+  --border: #424852;
+  --border-strong: #525963;
+
+  --text: #e7e8ea;
+  --text-muted: #a4aab2;
+  --text-faint: #737982;
+
+  --accent: #22b8cf;
+  --accent-hover: #3bc9db;
+  --danger: #f0666b;
+
+  /* Bolhas — ciano claro */
+  --bubble-bg: #93dcea;
+  --bubble-bg-hover: #a9e6f2;
+  --bubble-ring: #34c6d9;
+  --bubble-text: #0a2b31;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-hover: var(--bg-hover);
+  --color-border-base: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-base: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar discreta, estilo editor. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+}
+
+/* ---- Bolhas: animações ---- */
+
+/* aparição: incha e assenta no tamanho */
+@keyframes bubble-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* flutuar: deriva bem sutil + formato levemente irregular, sempre mudando */
+@keyframes bubble-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    border-radius: 50%;
+  }
+  20% {
+    transform: translate3d(1.5px, -2px, 0) scale(1.006);
+    border-radius: 48% 52% 53% 47% / 53% 48% 52% 47%;
+  }
+  40% {
+    transform: translate3d(-1px, -1px, 0) scale(0.997);
+    border-radius: 52% 48% 47% 53% / 48% 53% 47% 52%;
+  }
+  60% {
+    transform: translate3d(-2px, 1px, 0) scale(1.005);
+    border-radius: 47% 53% 51% 49% / 52% 48% 52% 48%;
+  }
+  80% {
+    transform: translate3d(1px, 1.5px, 0) scale(0.998);
+    border-radius: 51% 49% 48% 52% / 49% 52% 48% 51%;
+  }
+}
+
+/* linha: pontilhado "andando" bem devagar */
+@keyframes edge-dash-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-bubble],
+  [data-edge] {
+    animation: none !important;
+  }
+}
