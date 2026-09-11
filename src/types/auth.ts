@@ -15,8 +15,6 @@ export interface User {
 export interface LoginInput {
   email: string;
   password: string;
-  /** Frontend-only: controla a duração do cookie de sessão. */
-  remember: boolean;
 }
 
 /**

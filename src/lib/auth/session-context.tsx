@@ -8,8 +8,9 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { browserApi } from "@/lib/http/browser";
+import { useIdleTimeout, clearActivity } from "./use-idle-timeout";
 import type { User } from "@/types/auth";
 
 /**
@@ -40,6 +41,7 @@ export function SessionProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(initialUser);
   const [isPending, startTransition] = useTransition();
 
@@ -58,6 +60,7 @@ export function SessionProvider({
     try {
       await browserApi.post("auth/logout");
     } finally {
+      clearActivity();
       setUser(null);
       startTransition(() => {
         router.replace("/login");
@@ -65,6 +68,19 @@ export function SessionProvider({
       });
     }
   }, [router]);
+
+  /** Sessão expirou por inatividade: volta ao login preservando a rota atual. */
+  const expireSession = useCallback(() => {
+    clearActivity();
+    setUser(null);
+    const next = pathname && pathname !== "/login" ? `?next=${encodeURIComponent(pathname)}` : "";
+    startTransition(() => {
+      router.replace(`/login${next}`);
+      router.refresh();
+    });
+  }, [pathname, router]);
+
+  useIdleTimeout({ active: user !== null, onExpire: expireSession });
 
   const value = useMemo<SessionContextValue>(
     () => ({

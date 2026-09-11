@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { browserApi } from "@/lib/http/browser";
 import { useSession } from "@/lib/auth/session-context";
+import { markActivity } from "@/lib/auth/use-idle-timeout";
 import { useToast } from "@/components/feedback/toast";
 import { isApiError } from "@/lib/http/api-error";
 import type { LoginInput, User } from "@/types/auth";
@@ -25,7 +26,6 @@ export function LoginForm() {
   const [values, setValues] = useState<LoginInput>({
     email: "",
     password: "",
-    remember: false,
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -36,6 +36,7 @@ export function LoginForm() {
     setSubmitting(true);
     try {
       await browserApi.post<{ user: User }>("auth/login", values);
+      markActivity();
       await refresh();
       const next = params.get("next");
       router.replace(next && next.startsWith("/") ? next : "/");
@@ -74,15 +75,9 @@ export function LoginForm() {
         />
       </Field>
 
-      <label className="flex items-center gap-2 text-sm text-text-muted">
-        <input
-          type="checkbox"
-          checked={values.remember}
-          onChange={(e) => setValues((v) => ({ ...v, remember: e.target.checked }))}
-          className="accent-accent"
-        />
-        Manter conectado
-      </label>
+      <p className="text-xs text-text-muted">
+        Por segurança, a sessão expira após 1&nbsp;hora sem atividade.
+      </p>
 
       <button
         type="submit"

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serverEnv } from "@/config/env.server";
-import { getSessionToken } from "@/lib/auth/cookies";
+import { getSessionToken, setSessionCookie } from "@/lib/auth/cookies";
 
 /**
  * Proxy BFF genérico: qualquer `/(GET|POST|PUT|PATCH|DELETE) /api/<x>` que
@@ -21,6 +21,21 @@ const HOP_BY_HOP = new Set([
   "content-length",
 ]);
 
+/**
+ * Headers do browser que NÃO podem vazar para o Laravel: com `cookie`/`origin`/
+ * `referer` de origem first-party, o Sanctum entra em modo stateful (cookie +
+ * CSRF) e ignora o `Authorization: Bearer` — resultando em "CSRF token
+ * mismatch" em POST/PUT/PATCH/DELETE. O BFF fala com a API como cliente
+ * server-to-server: só token, nada de contexto de navegador.
+ */
+const STRIP_REQUEST_HEADERS = new Set([
+  "cookie",
+  "origin",
+  "referer",
+  "x-xsrf-token",
+  "x-forwarded-host",
+]);
+
 async function proxy(request: NextRequest, segments: string[]): Promise<Response> {
   const token = await getSessionToken();
 
@@ -32,7 +47,10 @@ async function proxy(request: NextRequest, segments: string[]): Promise<Response
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) headers.set(key, value);
+    const name = key.toLowerCase();
+    if (!HOP_BY_HOP.has(name) && !STRIP_REQUEST_HEADERS.has(name)) {
+      headers.set(key, value);
+    }
   });
   headers.set("Accept", request.headers.get("accept") ?? "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -55,6 +73,13 @@ async function proxy(request: NextRequest, segments: string[]): Promise<Response
       { message: "Falha ao contatar a API." },
       { status: 502 },
     );
+  }
+
+  // Sessão deslizante: qualquer chamada autenticada bem-sucedida reinicia a
+  // janela de inatividade (re-emite o cookie com `maxAge` cheio). Um 401
+  // upstream NÃO renova — deixa o cookie expirar naturalmente.
+  if (token && upstream.ok) {
+    await setSessionCookie(token);
   }
 
   const responseHeaders = new Headers();

@@ -19,9 +19,11 @@ const baseOptions = {
 
 export async function setSessionCookie(token: string, maxAgeSeconds?: number) {
   const store = await cookies();
+  // Sem `maxAgeSeconds` explícito, a sessão vale pela janela de inatividade —
+  // cada chamada autenticada re-emite o cookie e desliza esse prazo.
   store.set(COOKIE_NAME, token, {
     ...baseOptions,
-    maxAge: maxAgeSeconds ?? serverEnv.SESSION_MAX_AGE,
+    maxAge: maxAgeSeconds ?? serverEnv.SESSION_IDLE_TIMEOUT,
   });
 }
 

@@ -21,7 +21,7 @@ export function BubbleListView({
       x: Math.round(Math.random() * 400 - 200),
       y: Math.round(Math.random() * 300 - 150),
     });
-    router.push(`/bubble/${b.id}`);
+    if (b) router.push(`/bubble/${b.id}`);
   }
 
   const countFor = (id: string) =>

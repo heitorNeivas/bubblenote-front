@@ -43,5 +43,5 @@ next-env.d.ts
 # Permite versionar o template de ambiente
 !.env.example
 
-# claude code — settings.json é compartilhado, settings.local.json é pessoal
-.claude/settings.local.json
+# claude code
+.claude/

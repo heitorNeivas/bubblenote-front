@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { serverApiPublic } from "@/lib/http/server";
 import { setSessionCookie } from "@/lib/auth/cookies";
-import { serverEnv } from "@/config/env.server";
 import type { LoginResponse } from "@/types/auth";
 import { isApiError } from "@/lib/http/api-error";
 
@@ -10,7 +9,8 @@ import { isApiError } from "@/lib/http/api-error";
  * Encaminha as credenciais ao Laravel (que valida). Em sucesso, grava o token
  * no cookie httpOnly e devolve só o `user`.
  *
- * `remember` NÃO é validação — controla apenas a duração do cookie de sessão.
+ * A sessão sempre nasce com a janela de inatividade de 1h
+ * (`SESSION_IDLE_TIMEOUT`) — vale para todos, sem opção de "manter conectado".
  */
 export async function POST(request: Request) {
   let raw: unknown;
@@ -20,10 +20,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "JSON inválido" }, { status: 400 });
   }
 
-  const { email, password, remember } = (raw ?? {}) as {
+  const { email, password } = (raw ?? {}) as {
     email?: unknown;
     password?: unknown;
-    remember?: unknown;
   };
 
   try {
@@ -32,10 +31,7 @@ export async function POST(request: Request) {
       body: { email, password },
     });
 
-    await setSessionCookie(
-      result.token,
-      remember ? serverEnv.SESSION_MAX_AGE : undefined,
-    );
+    await setSessionCookie(result.token);
 
     return NextResponse.json({ user: result.user });
   } catch (error) {

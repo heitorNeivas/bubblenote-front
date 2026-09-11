@@ -21,6 +21,7 @@ import type { Note } from "@/types/note";
 import { browserApi } from "@/lib/http/browser";
 import { toUserMessage } from "@/lib/http/api-error";
 import { useSession } from "@/lib/auth/session-context";
+import { useToast } from "@/components/feedback/toast";
 import { exampleState } from "./example";
 
 /**
@@ -43,7 +44,8 @@ interface BubblesContextValue extends BubblesState {
   error: string | null;
   /** id da bolha recém-criada (para a animação de aparição); some sozinho. */
   justCreatedId: string | null;
-  createBubble: (input?: CreateBubbleInput) => Promise<Bubble>;
+  /** Resolve com a bolha criada, ou `null` se a API falhou (erro já exibido). */
+  createBubble: (input?: CreateBubbleInput) => Promise<Bubble | null>;
   updateBubble: (id: string, patch: UpdateBubbleInput) => void;
   removeBubble: (id: string) => void;
   linkBubbles: (source: string, target: string) => void;
@@ -90,6 +92,7 @@ function outgoingIds(links: BubbleLink[], sourceId: string): number[] {
 
 export function BubblesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
+  const toast = useToast();
   const [state, setState] = useState<BubblesState>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +132,7 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         setState(EMPTY);
         setError(toUserMessage(cause));
+        toast.error(cause);
       })
       .finally(() => {
         if (!cancelled) setHydrated(true);
@@ -143,16 +147,24 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
 
   const createBubble = useCallback(
-    async (input: CreateBubbleInput = {}): Promise<Bubble> => {
+    async (input: CreateBubbleInput = {}): Promise<Bubble | null> => {
       const x = input.x ?? 0;
       const y = input.y ?? 0;
 
-      // `title` é obrigatório e não-vazio no backend (StoreNoteRequest).
-      const { data: note } = await browserApi.post<ApiResource<Note>>("notes", {
-        title: input.title?.trim() || "Nota sem título",
-        body_markdown: input.content ?? "",
-        properties: { x, y },
-      });
+      let note: Note;
+      try {
+        // `title` é obrigatório e não-vazio no backend (StoreNoteRequest).
+        ({ data: note } = await browserApi.post<ApiResource<Note>>("notes", {
+          title: input.title?.trim() || "Nota sem título",
+          body_markdown: input.content ?? "",
+          properties: { x, y },
+        }));
+      } catch (cause) {
+        setError(toUserMessage(cause));
+        toast.error(cause);
+        return null;
+      }
+
       const bubble = noteToBubble(note);
 
       setState((s) => ({ ...s, bubbles: [...s.bubbles, bubble] }));
@@ -166,7 +178,7 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
 
       return bubble;
     },
-    [],
+    [toast],
   );
 
   const updateBubble = useCallback((id: string, patch: UpdateBubbleInput) => {
@@ -182,8 +194,11 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
         ...(content !== undefined ? { body_markdown: content } : {}),
         ...(x !== undefined || y !== undefined ? { properties: { x, y } } : {}),
       })
-      .catch((cause) => setError(toUserMessage(cause)));
-  }, []);
+      .catch((cause) => {
+        setError(toUserMessage(cause));
+        toast.error(cause);
+      });
+  }, [toast]);
 
   const removeBubble = useCallback((id: string) => {
     setState((s) => ({
@@ -193,8 +208,11 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
 
     browserApi
       .delete(`notes/${id}`)
-      .catch((cause) => setError(toUserMessage(cause)));
-  }, []);
+      .catch((cause) => {
+        setError(toUserMessage(cause));
+        toast.error(cause);
+      });
+  }, [toast]);
 
   const linkBubbles = useCallback((source: string, target: string) => {
     if (source === target) return;
@@ -212,11 +230,14 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
       // O backend faz `sync()`: precisa da lista completa de saída, não só do novo id.
       browserApi
         .patch(`notes/${source}`, { linked_note_ids: outgoingIds(nextLinks, source) })
-        .catch((cause) => setError(toUserMessage(cause)));
+        .catch((cause) => {
+          setError(toUserMessage(cause));
+          toast.error(cause);
+        });
 
       return { ...s, links: nextLinks };
     });
-  }, []);
+  }, [toast]);
 
   const unlink = useCallback((linkIdToRemove: string) => {
     setState((s) => {
@@ -229,20 +250,26 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
         .patch(`notes/${link.source}`, {
           linked_note_ids: outgoingIds(nextLinks, link.source),
         })
-        .catch((cause) => setError(toUserMessage(cause)));
+        .catch((cause) => {
+          setError(toUserMessage(cause));
+          toast.error(cause);
+        });
 
       return { ...s, links: nextLinks };
     });
-  }, []);
+  }, [toast]);
 
   const reset = useCallback(() => {
     setState((s) => {
       Promise.all(s.bubbles.map((b) => browserApi.delete(`notes/${b.id}`))).catch(
-        (cause) => setError(toUserMessage(cause)),
+        (cause) => {
+          setError(toUserMessage(cause));
+          toast.error(cause);
+        },
       );
       return EMPTY;
     });
-  }, []);
+  }, [toast]);
 
   const loadExample = useCallback(() => {
     void (async () => {
@@ -258,6 +285,8 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
             x: b.x,
             y: b.y,
           });
+          // Falhou a criação (erro já exibido pelo toast): aborta o exemplo.
+          if (!created) return;
           idMap.set(b.id, created.id);
         }
 
@@ -268,9 +297,10 @@ export function BubblesProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (cause) {
         setError(toUserMessage(cause));
+        toast.error(cause);
       }
     })();
-  }, [createBubble, linkBubbles]);
+  }, [createBubble, linkBubbles, toast]);
 
   const value = useMemo<BubblesContextValue>(
     () => ({

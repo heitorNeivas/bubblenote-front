@@ -16,3 +16,5 @@ Responda com componentes modulares, foco em UI/UX e código limpo.
 2. **Autenticação:** O token recebido no login deve ser armazenado com segurança e injetado automaticamente no header `Authorization: Bearer <token>` de todas as requisições privadas.
 3. **Componentização:** Separe a interface em componentes lógicos (Sidebar, EditorCentral, MarkdownViewer).
 4. **Gerenciamento de Estado:** Mantenha o estado local enxuto e gerencie os erros de API graciosamente, exibindo feedbacks visuais na tela em caso de falha no servidor.
+
+-> LEMBRANDO, toda implementação, lembre-se que o código está open source, não deixe informações sensíveis minhas expostas  

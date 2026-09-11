@@ -6,10 +6,21 @@ import { z } from "zod";
  */
 const schema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().min(1).default("Granito"),
+  /**
+   * Espelho de `SESSION_IDLE_TIMEOUT` (segundos) para o cliente conseguir
+   * fazer o redirect proativo antes do cookie httpOnly expirar. Mantenha os
+   * dois valores em sincronia — o servidor continua sendo a autoridade.
+   */
+  NEXT_PUBLIC_SESSION_IDLE_TIMEOUT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60),
 });
 
 const parsed = schema.safeParse({
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+  NEXT_PUBLIC_SESSION_IDLE_TIMEOUT: process.env.NEXT_PUBLIC_SESSION_IDLE_TIMEOUT,
 });
 
 if (!parsed.success) {

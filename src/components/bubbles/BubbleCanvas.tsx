@@ -197,7 +197,7 @@ export function BubbleCanvas({ view, onToggleView, onClear }: BubbleCanvasProps)
       x: Math.round(center.x - NODE_W / 2 + (Math.random() * 40 - 20)),
       y: Math.round(center.y - NODE_H / 2 + (Math.random() * 40 - 20)),
     });
-    setSelectedId(b.id);
+    if (b) setSelectedId(b.id);
   }, [createBubble, toWorld, rectOf]);
 
   const fit = useCallback(() => {
