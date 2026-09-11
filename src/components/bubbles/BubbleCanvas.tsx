@@ -162,10 +162,11 @@ export function BubbleCanvas({ view, onToggleView, onClear }: BubbleCanvasProps)
       const hit = live.current.bubbles.find(
         (b) => w.x >= b.x && w.x <= b.x + NODE_W && w.y >= b.y && w.y <= b.y + NODE_H,
       );
-      setDraft((d) => {
-        if (d && hit && hit.id !== d.source) linkBubbles(d.source, hit.id);
-        return null;
-      });
+      // `draftSource` vem do escopo do effect (e das deps) — sem closure velha.
+      // NÃO chamar linkBubbles dentro do updater do setDraft: o updater roda na
+      // fase de render e dispararia um setState do BubblesProvider ali.
+      if (hit && hit.id !== draftSource) linkBubbles(draftSource, hit.id);
+      setDraft(null);
     };
     const cancel = () => setDraft(null);
     window.addEventListener("pointermove", move);
@@ -187,12 +188,12 @@ export function BubbleCanvas({ view, onToggleView, onClear }: BubbleCanvasProps)
     setPan({ x: (p.x / z) * next, y: (p.y / z) * next });
   }, []);
 
-  const addBubble = useCallback(() => {
+  const addBubble = useCallback(async () => {
     const center = toWorld(
       (rectOf()?.width ?? 0) / 2,
       (rectOf()?.height ?? 0) / 2,
     );
-    const b = createBubble({
+    const b = await createBubble({
       x: Math.round(center.x - NODE_W / 2 + (Math.random() * 40 - 20)),
       y: Math.round(center.y - NODE_H / 2 + (Math.random() * 40 - 20)),
     });

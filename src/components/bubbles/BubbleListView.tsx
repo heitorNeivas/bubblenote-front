@@ -16,8 +16,8 @@ export function BubbleListView({
   const router = useRouter();
   const { bubbles, links, createBubble } = useBubbles();
 
-  function add() {
-    const b = createBubble({
+  async function add() {
+    const b = await createBubble({
       x: Math.round(Math.random() * 400 - 200),
       y: Math.round(Math.random() * 300 - 150),
     });

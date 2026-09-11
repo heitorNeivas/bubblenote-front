@@ -9,7 +9,7 @@ export function EmptyState() {
   function createFirst() {
     // Não navega: a bolha aparece no canvas (com a animação de aparição);
     // clicar nela abre a nota.
-    createBubble({ x: 0, y: 0 });
+    void createBubble({ x: 0, y: 0 });
   }
 
   return (
